@@ -5,6 +5,7 @@ using Eto;
 using Raylib_CsLo;
 using RayImGui;
 using ImGuiNET;
+using Bunzora.Smoothing;
 
 namespace Bunzora
 {
@@ -28,13 +29,20 @@ namespace Bunzora
         private Color RBrushColor => new Color((int)(BrushColor.X * 255), (int)(BrushColor.Y * 255), (int)(BrushColor.Z * 255), (int)(BrushColor.W * 255));
         private bool IsStylusDown;
         private bool WasUp = true;
+        private bool WasHoveringAtDown;
         private bool WasHovered;
+
+        public float FillTolerance = 10f;
+        public int GapThreshold = 5;
 
         private Vector2 PreviousPosition;
         private float PreviousPressure;
         private Vector2 ReportedStylusPosition = new Vector2(0, 0);
         private Vector2 ApproximateStylusPositionAtWindow;
         private float ReportedStylusPressure = 0;
+
+        public ISmoothing smoothing = new ExponentialMovingAverage();
+        public int smoothingIntensity = 50;
 
         public MainScene(int width = 960, int height = 540, string title = "Bunzora")
         {
@@ -87,27 +95,24 @@ namespace Bunzora
             Raylib.BeginDrawing();
             Raylib.ClearBackground(new Color(255, 255, 255, 255));
 
-
-            var pos = ApproximateStylusPositionAtWindow;
-            if (IsStylusDown && !WasHovered)
+            var pos = smoothing.Stroke(ApproximateStylusPositionAtWindow, smoothingIntensity, 5);
+            if (IsStylusDown)
             {
                 if (WasUp)
                 {
-                    PreviousPosition = pos;
-                    PreviousPressure = ReportedStylusPressure;
+                    WasHoveringAtDown = WasHovered;
                     WasUp = false;
+
+                    OnStylusDown(pos);
                 }
 
-                Draw(PreviousPosition, PreviousPressure, pos, ReportedStylusPressure);
-
-                PreviousPosition = pos;
-                PreviousPressure = ReportedStylusPressure;
+                OnStylusPressed(pos);
             }
             else
             {
                 if (!WasUp)
                 {
-                    RegisterStroke();
+                    OnStylusUp();
                     WasUp = true;
                 }
                 Raylib.DrawCircleV(pos, BrushSize, new Color(255, 0, 0, 255));
@@ -118,14 +123,139 @@ namespace Bunzora
                 layer.Draw(0, 0);
             }
 
+            if (Raylib.IsMouseButtonPressed(MouseButton.MOUSE_BUTTON_RIGHT))
+            {
+                BucketFill();
+            }
+
             rlImGui.Begin();
+            WasHovered = ImGui.IsAnyItemHovered() || ImGui.IsWindowHovered(ImGuiHoveredFlags.AnyWindow);
             ImGui.Begin("Brush Settings");
             ImGui.SliderFloat("Brush Size", ref BrushSize, 1, 1000);
+            ImGui.SliderInt("Brush Smoothing", ref smoothingIntensity, 0, 100);
             ImGui.ColorPicker4("Brush Color", ref BrushColor);
+            ImGui.Text($"Brush Color: {WasHovered}");
             ImGui.End();
-            WasHovered = ImGui.IsAnyItemHovered();
             rlImGui.End();
             Raylib.EndDrawing();
+        }
+
+        public void OnStylusDown(Vector2 position)
+        {
+            if (WasHoveringAtDown) return;
+
+            PreviousPosition = position;
+            PreviousPressure = ReportedStylusPressure;
+        }
+
+        public void OnStylusPressed(Vector2 position)
+        {
+            if (WasHoveringAtDown) return;
+
+            Draw(PreviousPosition, PreviousPressure, position, ReportedStylusPressure);
+
+            PreviousPosition = position;
+            PreviousPressure = ReportedStylusPressure;
+        }
+
+        public void OnStylusUp()
+        {
+            if (WasHoveringAtDown) return;
+
+            RegisterStroke();
+        }
+
+        public void BucketFill()
+        {
+            var width = selectedLayer.RenderTexture.texture.width;
+            var height = selectedLayer.RenderTexture.texture.height;
+
+            Vector2 mousePos = Raylib.GetMousePosition();
+            int x = (int)mousePos.X;
+            int y = height - (int)mousePos.Y; // Invert Y position
+            if (x >= 0 && x < width && y >= 0 && y < height)
+            {
+                unsafe
+                {
+                    Image img = Raylib.LoadImageFromTexture(selectedLayer.RenderTexture.texture);
+                    Color* pixels = Raylib.LoadImageColors(img);
+                    Color targetColor = pixels[y * width + x];
+
+                    if (!ColorsAreSimilar(targetColor, RBrushColor, FillTolerance))
+                    {
+                        FloodFill(pixels, x, y, targetColor, RBrushColor, width, height, FillTolerance, GapThreshold);
+                        Raylib.UpdateTexture(selectedLayer.RenderTexture.texture, pixels);
+                    }
+
+                    Raylib.UnloadImageColors(pixels);
+                    Raylib.UnloadImage(img);
+                }
+                RegisterStroke();
+            }
+        }
+
+        static bool ColorsAreSimilar(Color a, Color b, float tolerance)
+        {
+            float toleranceSq = tolerance * tolerance;
+
+            float dr = a.r - b.r;
+            float dg = a.g - b.g;
+            float db = a.b - b.b;
+
+            return (dr * dr + dg * dg + db * db) <= toleranceSq;
+        }
+
+        unsafe static void FloodFill(Color* pixels, int x, int y, Color target, Color replacement, int width, int height, float colorTolerance, int gapThreshold)
+        {
+            if (ColorsAreSimilar(target, replacement, colorTolerance)) return;
+
+            Queue<(int, int)> queue = new Queue<(int, int)>();
+            HashSet<(int, int)> visited = new HashSet<(int, int)>();
+
+            queue.Enqueue((x, y));
+            visited.Add((x, y));
+
+            while (queue.Count > 0)
+            {
+                (int cx, int cy) = queue.Dequeue();
+                int index = cy * width + cx;
+
+                if (!ColorsAreSimilar(pixels[index], target, colorTolerance))
+                    continue;
+
+                pixels[index] = replacement;
+
+                // 4-way flood fill with optional gap handling
+                TryEnqueue(cx + 1, cy);
+                TryEnqueue(cx - 1, cy);
+                TryEnqueue(cx, cy + 1);
+                TryEnqueue(cx, cy - 1);
+
+                if (gapThreshold > 0)
+                {
+                    for (int dx = -gapThreshold; dx <= gapThreshold; dx++)
+                    {
+                        for (int dy = -gapThreshold; dy <= gapThreshold; dy++)
+                        {
+                            if (dx == 0 && dy == 0) continue; // Skip self
+                            TryEnqueue(cx + dx, cy + dy);
+                        }
+                    }
+                }
+            }
+
+            void TryEnqueue(int nx, int ny)
+            {
+                if (nx >= 0 && nx < width && ny >= 0 && ny < height && !visited.Contains((nx, ny)))
+                {
+                    int neighborIndex = ny * width + nx;
+                    if (ColorsAreSimilar(pixels[neighborIndex], target, colorTolerance))
+                    {
+                        queue.Enqueue((nx, ny));
+                        visited.Add((nx, ny));
+                    }
+                }
+            }
         }
 
         public void RegisterStroke()
