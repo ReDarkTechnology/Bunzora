@@ -1,0 +1,40 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.12.35707.178 d17.12
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bunzora", "Bunzora\Bunzora\Bunzora.csproj", "{1EC6D684-2730-4DEF-A478-5CB844911C18}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bunzora.Gtk", "Bunzora\Bunzora.Gtk\Bunzora.Gtk.csproj", "{3EBBC5C4-311A-49A5-9912-8FF80E4FA0F7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bunzora.Mac", "Bunzora\Bunzora.Mac\Bunzora.Mac.csproj", "{57C8D06C-1F53-403C-9849-690CFC6212E3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bunzora.Wpf", "Bunzora\Bunzora.Wpf\Bunzora.Wpf.csproj", "{35AAAB2C-2C2F-4643-9925-AE5A8BD0CF16}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1EC6D684-2730-4DEF-A478-5CB844911C18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1EC6D684-2730-4DEF-A478-5CB844911C18}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1EC6D684-2730-4DEF-A478-5CB844911C18}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1EC6D684-2730-4DEF-A478-5CB844911C18}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3EBBC5C4-311A-49A5-9912-8FF80E4FA0F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3EBBC5C4-311A-49A5-9912-8FF80E4FA0F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3EBBC5C4-311A-49A5-9912-8FF80E4FA0F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3EBBC5C4-311A-49A5-9912-8FF80E4FA0F7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{57C8D06C-1F53-403C-9849-690CFC6212E3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57C8D06C-1F53-403C-9849-690CFC6212E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57C8D06C-1F53-403C-9849-690CFC6212E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57C8D06C-1F53-403C-9849-690CFC6212E3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{35AAAB2C-2C2F-4643-9925-AE5A8BD0CF16}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{35AAAB2C-2C2F-4643-9925-AE5A8BD0CF16}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{35AAAB2C-2C2F-4643-9925-AE5A8BD0CF16}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{35AAAB2C-2C2F-4643-9925-AE5A8BD0CF16}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

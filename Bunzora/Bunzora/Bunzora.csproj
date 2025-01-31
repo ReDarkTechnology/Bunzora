@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="RayImGui\rlImGui.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Eto.Forms" Version="2.9.0" />
+    <PackageReference Include="ImGui.NET" Version="1.91.6.1" />
+    <PackageReference Include="Raylib-CsLo" Version="4.2.0.9" />
+  </ItemGroup>
+
+</Project>
