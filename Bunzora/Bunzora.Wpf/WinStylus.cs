@@ -17,7 +17,9 @@ public class WindowsStylus : Stylus
     private delegate IntPtr WndProcDelegate(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
     // Constants for disabling pen feedback
+    private const string MICROSOFT_TABLETPENSERVICE_PROPERTY = "MicrosoftTabletPenService";
     private const uint PENVISUALIZATIONOFF = 0x00000000;
+    private const int TABLET_DISABLE_FLICKS = 0x10000000; // Disables flick gestures
 
     [DllImport("user32.dll")]
     private static extern bool SetWindowFeedbackSetting(IntPtr hwnd, uint feedbackType, uint flags, uint size, ref uint value);
@@ -104,6 +106,11 @@ public class WindowsStylus : Stylus
         ConfigurePenInput(hwnd, true);
     }
 
+    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    private static extern bool SetProp(IntPtr hWnd, IntPtr lpString, IntPtr hData);
+    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    private static extern bool SetProp(IntPtr hWnd, IntPtr lpString, UIntPtr hData);
+
     static void ConfigurePenInput(IntPtr hwnd, bool isCanvas)
     {
         uint setting = isCanvas ? PENVISUALIZATIONOFF : 1; // Enable/Disable feedback
@@ -113,8 +120,9 @@ public class WindowsStylus : Stylus
 
         if (isCanvas)
         {
-            User32.SetProp(hwnd, "MicrosoftTabletPenServiceProperty", new IntPtr(1));
-            User32.SetProp(hwnd, "DisableProcessWindowsPenFeedback", new IntPtr(1));
+            SetProp(hwnd, new IntPtr(5063), new IntPtr(0x13C7));
+            User32.SetProp(hwnd, "131073", new IntPtr(0x20001));
+            User32.SetProp(hwnd, "MicrosoftTabletPenServiceProperty", new IntPtr(0x10019));
         }
         else
         {

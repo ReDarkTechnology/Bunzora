@@ -24,16 +24,18 @@ namespace Bunzora
         public LastStrokeEvent lastLastStrokeEvent;
 
         public Layer selectedLayer;
-        public float BrushSize = 10f;
+        public float BrushSize = 4f;
         public Vector4 BrushColor = new Vector4(0, 0, 0, 1f);
         private Color RBrushColor => new Color((int)(BrushColor.X * 255), (int)(BrushColor.Y * 255), (int)(BrushColor.Z * 255), (int)(BrushColor.W * 255));
         private bool IsStylusDown;
         private bool WasUp = true;
         private bool WasHoveringAtDown;
-        private bool WasHovered;
+        private bool WasHovering;
 
-        public float FillTolerance = 10f;
+        public float FillTolerance = 1f;
         public int GapThreshold = 5;
+
+        public ToolMode tool = ToolMode.Brush;
 
         private Vector2 PreviousPosition;
         private float PreviousPressure;
@@ -74,7 +76,9 @@ namespace Bunzora
 
         public void Update()
         {
-            if (Raylib.IsKeyDown(KeyboardKey.KEY_LEFT_CONTROL) || Raylib.IsKeyDown(KeyboardKey.KEY_RIGHT_CONTROL))
+            bool isCtrlPressed = Raylib.IsKeyDown(KeyboardKey.KEY_LEFT_CONTROL) || Raylib.IsKeyDown(KeyboardKey.KEY_RIGHT_CONTROL);
+            bool isShiftPressed = Raylib.IsKeyDown(KeyboardKey.KEY_LEFT_SHIFT) || Raylib.IsKeyDown(KeyboardKey.KEY_RIGHT_SHIFT);
+            if (isCtrlPressed)
             {
                 if (Raylib.IsKeyPressed(KeyboardKey.KEY_Z))
                 {
@@ -82,13 +86,26 @@ namespace Bunzora
                     Console.WriteLine("Undo");
                 }
 
-                if (Raylib.IsKeyPressed(KeyboardKey.KEY_Y) || ((Raylib.IsKeyDown(KeyboardKey.KEY_LEFT_SHIFT) || Raylib.IsKeyDown(KeyboardKey.KEY_RIGHT_SHIFT)) && Raylib.IsKeyPressed(KeyboardKey.KEY_Z)))
+                if (Raylib.IsKeyPressed(KeyboardKey.KEY_Y) || (isShiftPressed && Raylib.IsKeyPressed(KeyboardKey.KEY_Z)))
                 {
                     Redo();
                     Console.WriteLine("Redo");
                 }
             }
+            else if (!isShiftPressed)
+            {
+                if (Raylib.IsKeyPressed(KeyboardKey.KEY_B))
+                {
+                    tool = ToolMode.Brush;
+                    Console.WriteLine("Brush");
+                }
 
+                if (Raylib.IsKeyPressed(KeyboardKey.KEY_G))
+                {
+                    tool = ToolMode.Bucket;
+                    Console.WriteLine("Pen");
+                }
+            }
             if (Raylib.IsWindowReady())
                 OnPreEventPoll?.Invoke();
 
@@ -100,7 +117,7 @@ namespace Bunzora
             {
                 if (WasUp)
                 {
-                    WasHoveringAtDown = WasHovered;
+                    WasHoveringAtDown = WasHovering;
                     WasUp = false;
 
                     OnStylusDown(pos);
@@ -123,18 +140,14 @@ namespace Bunzora
                 layer.Draw(0, 0);
             }
 
-            if (Raylib.IsMouseButtonPressed(MouseButton.MOUSE_BUTTON_RIGHT))
-            {
-                BucketFill();
-            }
-
             rlImGui.Begin();
-            WasHovered = ImGui.IsAnyItemHovered() || ImGui.IsWindowHovered(ImGuiHoveredFlags.AnyWindow);
+            WasHovering = ImGui.IsAnyItemHovered() || ImGui.IsWindowHovered(ImGuiHoveredFlags.AnyWindow);
             ImGui.Begin("Brush Settings");
             ImGui.SliderFloat("Brush Size", ref BrushSize, 1, 1000);
             ImGui.SliderInt("Brush Smoothing", ref smoothingIntensity, 0, 100);
-            ImGui.ColorPicker4("Brush Color", ref BrushColor);
-            ImGui.Text($"Brush Color: {WasHovered}");
+            ImGui.ColorPicker4("Color", ref BrushColor);
+            ImGui.Text($"Current Tool: {tool:G}");
+            ImGui.Text($"Is Hovering ImGUI: {WasHovering}");
             ImGui.End();
             rlImGui.End();
             Raylib.EndDrawing();
@@ -146,13 +159,28 @@ namespace Bunzora
 
             PreviousPosition = position;
             PreviousPressure = ReportedStylusPressure;
+            switch (tool)
+            {
+                case ToolMode.Bucket:
+                    BucketFill(position);
+                    break;
+                default:
+                    break;
+            }
         }
 
         public void OnStylusPressed(Vector2 position)
         {
             if (WasHoveringAtDown) return;
 
-            Draw(PreviousPosition, PreviousPressure, position, ReportedStylusPressure);
+            switch (tool)
+            {
+                case ToolMode.Brush:
+                    Draw(PreviousPosition, PreviousPressure, position, ReportedStylusPressure);
+                    break;
+                default:
+                    break;
+            }
 
             PreviousPosition = position;
             PreviousPressure = ReportedStylusPressure;
@@ -162,17 +190,23 @@ namespace Bunzora
         {
             if (WasHoveringAtDown) return;
 
-            RegisterStroke();
+            switch (tool)
+            {
+                case ToolMode.Brush:
+                    RegisterStroke();
+                    break;
+                default:
+                    break;
+            }
         }
 
-        public void BucketFill()
+        public void BucketFill(Vector2 fromPosition)
         {
             var width = selectedLayer.RenderTexture.texture.width;
             var height = selectedLayer.RenderTexture.texture.height;
 
-            Vector2 mousePos = Raylib.GetMousePosition();
-            int x = (int)mousePos.X;
-            int y = height - (int)mousePos.Y; // Invert Y position
+            int x = (int)fromPosition.X;
+            int y = height - (int)fromPosition.Y; // Invert Y position
             if (x >= 0 && x < width && y >= 0 && y < height)
             {
                 unsafe
@@ -357,6 +391,13 @@ namespace Bunzora
         {
             public Image image;
             public Layer layer;
+        }
+
+        public enum ToolMode
+        {
+            Brush,
+            Eraser,
+            Bucket
         }
     }
 }
